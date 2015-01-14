@@ -14,14 +14,28 @@ module.exports = function (options) {
     asciidoctorOptions.base_dir = options.baseDir || options.base_dir || process.cwd();
     asciidoctorOptions.safe = options.safe || 'secured';
     asciidoctorOptions.doctype = options.doctype || 'article';
-    asciidoctorOptions.attributes = options.attributes || ['showtitle'];
-    asciidoctorOptions.header_footer = (options.headerFooter === undefined ? true : options.headerFooter);
+    asciidoctorOptions.attributes = options.attributes || [];
+    asciidoctorOptions.backend = options.backend || 'html5';
 
-    var optionsOpal = opal.hash2(
-        ['base_dir', 'safe', 'doctype', 'header_footer',
-            'attributes'
-        ], asciidoctorOptions);
+    if (options.headerFooter !== undefined) {
+        asciidoctorOptions.header_footer = options.headerFooter;
+    } else if (options.header_footer !== undefined) {
+        asciidoctorOptions.header_footer = options.header_footer;
+    } else {
+        asciidoctorOptions.header_footer = true;
+    }
 
+    if (options.templateDir || options.template_dir) {
+        asciidoctorOptions.template_dir = options.templateDir || options.template_dir;
+    }
+
+    var optionNames = [];
+    for (var optionName in asciidoctorOptions) {
+        optionNames.push(optionName);
+    }
+
+    // create opal options.
+    var optionsOpal = opal.hash2(optionNames, asciidoctorOptions);
 
     // creating a stream through which each file will pass
     var stream = through(function (file, encoding, callback) {
@@ -32,8 +46,7 @@ module.exports = function (options) {
         }
 
         if (file.isStream()) {
-            callback(new gutil.PluginError('gulp-asciidoctor',
-                'Streaming not supported'));
+            callback(new gutil.PluginError('gulp-asciidoctor','Streaming not supported'));
             return;
         }
 
@@ -44,8 +57,7 @@ module.exports = function (options) {
         // just pipe data next, or just do nothing to process file later in flushFunction
         // never forget callback to indicate that the file has been processed.
 
-        var data = processor.$convert(file.contents.toString(),
-            optionsOpal);
+        var data = processor.$convert(file.contents.toString(), optionsOpal);
 
         file.contents = new Buffer(data);
         file.path = gutil.replaceExtension(file.path, '.html');
